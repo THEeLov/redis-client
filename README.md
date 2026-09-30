@@ -1,13 +1,13 @@
-# redis-client
+# rust-redis-client
 
 A small, dependency-free Rust library for talking to a Redis-compatible server
 over a Unix socket. It speaks the RESP2 protocol and gives you typed methods
 such as `set`, `get` and `incr` instead of raw protocol messages.
 
 ```rust
-use redis_client::{Client, Commands};
+use rust_redis_client::{Client, Commands};
 
-fn main() -> redis_client::Result<()> {
+fn main() -> rust_redis_client::Result<()> {
     let mut client = Client::connect("/tmp/myredis.sock")?;
 
     client.set("A", 1)?;
@@ -20,19 +20,15 @@ fn main() -> redis_client::Result<()> {
 
 ## Installation
 
-The crate isn't published on crates.io. Add it to your project's `Cargo.toml`
-by path:
-
-```toml
-[dependencies]
-redis-client = { path = "../redis-client" }
+```sh
+cargo add rust-redis-client
 ```
 
-or from a git repository:
+or add it to your `Cargo.toml` by hand:
 
 ```toml
 [dependencies]
-redis-client = { git = "https://example.com/you/redis-client.git" }
+rust-redis-client = "0.1"
 ```
 
 It needs Rust 1.85 or newer (edition 2024) and a Unix-like OS, because it
@@ -42,7 +38,7 @@ connects through `std::os::unix::net::UnixStream`.
 
 ```rust
 use std::time::Duration;
-use redis_client::Client;
+use rust_redis_client::Client;
 
 // Uses the default timeout of 5 seconds for every read and write.
 let mut client = Client::connect("/tmp/myredis.sock")?;
@@ -58,7 +54,7 @@ with Ctrl+Z), so a successful `connect` means the server is really answering.
 ## Commands
 
 All commands are methods of the `Commands` trait, so bring it into scope with
-`use redis_client::Commands`.
+`use rust_redis_client::Commands`.
 
 | Method                 | Redis command | Returns                           |
 | ---------------------- | ------------- | --------------------------------- |
@@ -71,7 +67,7 @@ All commands are methods of the `Commands` trait, so bring it into scope with
 | `incr(key)`            | `INCR`        | `i64`, the new value              |
 | `decr(key)`            | `DECR`        | `i64`, the new value              |
 
-Every method returns `redis_client::Result<T>`.
+Every method returns `rust_redis_client::Result<T>`.
 
 ### Arguments
 
@@ -94,7 +90,7 @@ To send a command that has no method yet, use `request`. It returns the
 server's raw `Reply`:
 
 ```rust
-use redis_client::{Commands, Reply, ToArg};
+use rust_redis_client::{Commands, Reply, ToArg};
 
 let reply = client.request(&["EXPIRE".to_arg(), "A".to_arg(), 10.to_arg()])?;
 match reply {
@@ -109,7 +105,7 @@ example `(integer) 1`, `(nil)` or `"hello"`.
 
 ## Error handling
 
-`redis_client::Error` has three variants:
+`rust_redis_client::Error` has three variants:
 
 | Variant                  | Meaning                                                                                                          |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
@@ -118,7 +114,7 @@ example `(integer) 1`, `(nil)` or `"hello"`.
 | `Error::UnexpectedReply(Reply)` | The server answered with a reply type the command does not expect.                                        |
 
 ```rust
-use redis_client::{Commands, Error};
+use rust_redis_client::{Commands, Error};
 
 match client.incr("name") {
     Ok(n) => println!("new value: {n}"),
@@ -143,7 +139,7 @@ command and return a `Reply` gets the full API, which is handy for testing
 code without a running server:
 
 ```rust
-use redis_client::{Commands, Reply, Result};
+use rust_redis_client::{Commands, Reply, Result};
 
 struct AlwaysOk;
 
@@ -196,3 +192,17 @@ cargo test     # unit tests and doc tests, no server needed
 cargo clippy --all-targets -- -W clippy::pedantic -W clippy::nursery
 cargo doc --open
 ```
+
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
+  <https://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or <https://opensource.org/licenses/MIT>)
+
+at your option.
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.
