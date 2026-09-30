@@ -39,6 +39,15 @@ pub trait Commands {
         }
     }
 
+    /// Sends a `PING` with `message`, which the server returns back.
+    ///
+    /// # Errors
+    ///
+    /// See [the trait docs](Commands#errors).
+    fn ping_message(&mut self, message: impl ToArg) -> Result<Vec<u8>> {
+        bulk(call(self, &[b"PING".to_arg(), message.to_arg()])?)
+    }
+
     /// Returns `message` back from the server.
     ///
     /// # Errors
@@ -81,6 +90,16 @@ pub trait Commands {
         integer(call(self, &[b"DEL".to_arg(), key.to_arg()])?).map(|n| n > 0)
     }
 
+    /// Deletes all `keys`. Returns how many of them existed.
+    ///
+    /// # Errors
+    ///
+    /// See [the trait docs](Commands#errors). The server answers with an error
+    /// if `keys` is empty.
+    fn del_many<K: ToArg>(&mut self, keys: impl IntoIterator<Item = K>) -> Result<u64> {
+        count(call(self, &with_keys(b"DEL", keys))?)
+    }
+
     /// Returns whether `key` exists.
     ///
     /// # Errors
@@ -88,6 +107,16 @@ pub trait Commands {
     /// See [the trait docs](Commands#errors).
     fn exists(&mut self, key: impl ToArg) -> Result<bool> {
         integer(call(self, &[b"EXISTS".to_arg(), key.to_arg()])?).map(|n| n > 0)
+    }
+
+    /// Returns how many of `keys` exist. A key listed twice counts twice.
+    ///
+    /// # Errors
+    ///
+    /// See [the trait docs](Commands#errors). The server answers with an error
+    /// if `keys` is empty.
+    fn exists_many<K: ToArg>(&mut self, keys: impl IntoIterator<Item = K>) -> Result<u64> {
+        count(call(self, &with_keys(b"EXISTS", keys))?)
     }
 
     /// Increments the number stored under `key` by one and returns the new
@@ -131,6 +160,20 @@ fn bulk(reply: Reply) -> Result<Vec<u8>> {
 fn integer(reply: Reply) -> Result<i64> {
     match reply {
         Reply::Integer(n) => Ok(n),
+        other => Err(Error::UnexpectedReply(other)),
+    }
+}
+
+/// Builds the arguments of a command that takes a list of keys.
+fn with_keys<K: ToArg>(name: &[u8], keys: impl IntoIterator<Item = K>) -> Vec<Vec<u8>> {
+    std::iter::once(name.to_vec())
+        .chain(keys.into_iter().map(|key| key.to_arg()))
+        .collect()
+}
+
+fn count(reply: Reply) -> Result<u64> {
+    match reply {
+        Reply::Integer(n) => u64::try_from(n).map_err(|_| Error::UnexpectedReply(reply)),
         other => Err(Error::UnexpectedReply(other)),
     }
 }
@@ -183,6 +226,22 @@ mod tests {
         assert!(fake.del("k").unwrap());
         assert!(!fake.exists("k").unwrap());
         assert_eq!(fake.incr("n").unwrap(), 7);
+    }
+
+    #[test]
+    fn sends_every_key() {
+        let mut fake = Fake::answering([Reply::Integer(2), Reply::Integer(1)]);
+        assert_eq!(fake.exists_many(["a", "a", "x"]).unwrap(), 2);
+        assert_eq!(fake.del_many(vec![b"a".to_vec()]).unwrap(), 1);
+        assert_eq!(fake.sent[0], [b"EXISTS".to_vec(), b"a".to_vec(), b"a".to_vec(), b"x".to_vec()]);
+        assert_eq!(fake.sent[1], [b"DEL".to_vec(), b"a".to_vec()]);
+    }
+
+    #[test]
+    fn ping_with_message_returns_it() {
+        let mut fake = Fake::answering([Reply::Bulk(b"hi".to_vec())]);
+        assert_eq!(fake.ping_message("hi").unwrap(), b"hi");
+        assert_eq!(fake.sent, [[b"PING".to_vec(), b"hi".to_vec()]]);
     }
 
     #[test]

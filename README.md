@@ -56,16 +56,19 @@ with Ctrl+Z), so a successful `connect` means the server is really answering.
 All commands are methods of the `Commands` trait, so bring it into scope with
 `use rust_redis_client::Commands`.
 
-| Method                 | Redis command | Returns                           |
-| ---------------------- | ------------- | --------------------------------- |
-| `ping()`               | `PING`        | `()`                              |
-| `echo(message)`        | `ECHO`        | `Vec<u8>`                         |
-| `set(key, value)`      | `SET`         | `()`                              |
-| `get(key)`             | `GET`         | `Option<Vec<u8>>`, `None` if missing |
-| `del(key)`             | `DEL`         | `bool`, whether the key existed   |
-| `exists(key)`          | `EXISTS`      | `bool`                            |
-| `incr(key)`            | `INCR`        | `i64`, the new value              |
-| `decr(key)`            | `DECR`        | `i64`, the new value              |
+| Method                 | Redis command    | Returns                              |
+| ---------------------- | ---------------- | ------------------------------------ |
+| `ping()`               | `PING`           | `()`                                 |
+| `ping_message(msg)`    | `PING message`   | `Vec<u8>`, the message back          |
+| `echo(message)`        | `ECHO`           | `Vec<u8>`                            |
+| `set(key, value)`      | `SET`            | `()`                                 |
+| `get(key)`             | `GET`            | `Option<Vec<u8>>`, `None` if missing |
+| `del(key)`             | `DEL`            | `bool`, whether the key existed      |
+| `del_many(keys)`       | `DEL key ...`    | `u64`, how many keys existed         |
+| `exists(key)`          | `EXISTS`         | `bool`                               |
+| `exists_many(keys)`    | `EXISTS key ...` | `u64`, a key listed twice counts twice |
+| `incr(key)`            | `INCR`           | `i64`, the new value                 |
+| `decr(key)`            | `DECR`           | `i64`, the new value                 |
 
 Every method returns `rust_redis_client::Result<T>`.
 
